@@ -1,0 +1,102 @@
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+*.manifest
+*.spec
+
+# ──────────────────────────────────────────────
+# Virtual Environment
+# ──────────────────────────────────────────────
+venv/
+env/
+.venv/
+.env/
+
+# ──────────────────────────────────────────────
+# Environment Variables
+# ──────────────────────────────────────────────
+.env
+*.env
+!backend/requirements.txt
+
+# ──────────────────────────────────────────────
+# IDE / Editor
+# ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+# ──────────────────────────────────────────────
+# OS Files
+# ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# ──────────────────────────────────────────────
+# Temporary / Uploaded Files
+# ──────────────────────────────────────────────
+backend/temp/
+*.pdf
+!backend/resume.pdf
+
+# ──────────────────────────────────────────────
+# Logs
+# ──────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ──────────────────────────────────────────────
+# Testing / Coverage
+# ──────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+nosetests.xml
+coverage.xml
+
+# ──────────────────────────────────────────────
+# Distribution / Packaging
+# ──────────────────────────────────────────────
+*.tar.gz
+*.whl
+
+# ──────────────────────────────────────────────
+# Node / Frontend
+# ──────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+server/node_modules/
+frontend/.vite/
+frontend/dist/
+server/dist/
+
+# ──────────────────────────────────────────────
+# Docker / Containers
+# ──────────────────────────────────────────────
+.docker/
+docker-data/
