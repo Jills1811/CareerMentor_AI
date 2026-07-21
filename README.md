@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">🔍 CareerLens AI</h1>
+  <h1 align="center">🔍 CareerMentor AI</h1>
   <p align="center">
     <strong>Multi-Agent Resume & Interview Intelligence System</strong>
   </p>
@@ -91,33 +91,33 @@ The system exposes a **RESTful API** via FastAPI (used by the bundled React app)
 │                        CareerLens AI                            │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   ┌──────────┐    ┌──────────┐    ┌────────────┐               │
-│   │  Resume   │───▶│   ATS    │───▶│  Decision  │               │
-│   │  Agent    │    │  Agent   │    │   Node     │               │
-│   └──────────┘    └──────────┘    └─────┬──────┘               │
+│   ┌──────────┐    ┌──────────┐    ┌────────────┐                │
+│   │  Resume  │──▶│   ATS    │───▶│  Decision  │                │
+│   │  Agent   │    │  Agent   │    │   Node     │                │
+│   └──────────┘    └──────────┘    └─────┬──────┘                │
 │                                         │                       │
-│                              ┌──────────┴──────────┐           │
-│                              │                     │           │
-│                          YES ▼                 NO  ▼           │
-│                    ┌──────────────┐                 │           │
-│                    │ Interviewer  │                 │           │
-│                    │    Agent     │                 │           │
-│                    └──────┬───────┘                 │           │
-│                           ▼                        │           │
-│                    ┌──────────────┐                 │           │
-│                    │  Evaluator   │                 │           │
-│                    │    Agent     │                 │           │
-│                    └──────┬───────┘                 │           │
-│                           │                        │           │
-│                           └────────────┬───────────┘           │
-│                                        ▼                       │
-│                                 ┌──────────────┐               │
-│                                 │   Feedback   │               │
-│                                 │    Agent     │               │
-│                                 └──────────────┘               │
+│                              ┌──────────┴──────────┐            │
+│                              │                     │            │
+│                          YES ▼                 NO  ▼            │
+│                    ┌──────────────┐                │            │
+│                    │ Interviewer  │                │            │
+│                    │    Agent     │                │            │
+│                    └──────┬───────┘                │            │
+│                           ▼                        │            │
+│                    ┌──────────────┐                │            │
+│                    │  Evaluator   │                │            │
+│                    │    Agent     │                │            │
+│                    └──────┬───────┘                │            │
+│                           │                        │            │
+│                           └────────────┬───────────┘            │
+│                                        ▼                        │
+│                                 ┌──────────────┐                │
+│                                 │   Feedback   │                │
+│                                 │    Agent     │                │
+│                                 └──────────────┘                │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│          HuggingFace Inference API (LLM Backend)               │
+│          HuggingFace Inference API (LLM Backend)                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -691,5 +691,5 @@ To switch models, update the `model` variable. Supported models include any mode
 ---
 
 <p align="center">
-  Built with ❤️ using Python, FastAPI, LangGraph & HuggingFace by <i>Vidhi Ladani</i>
+  Built with ❤️ using Python, FastAPI, LangGraph & HuggingFace by <i>Ambaliya Jills</i>
 </p>
