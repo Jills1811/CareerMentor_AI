@@ -233,7 +233,7 @@ CareerMentor_AI/
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/your-username/CareerMentor_AI.git
+   git clone https://github.com/Jills1811/CareerMentor_AI.git
    cd CareerMentor_AI
    ```
 
