@@ -10,7 +10,7 @@ const EvaluationPage = () => {
   const loadInterviews = async () => {
     setLoading(true);
     try {
-      const storedUser = JSON.parse(localStorage.getItem('careerlens_user') || '{}');
+      const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
       const uid = storedUser.id || 'demo_user_123';
       const res = await fetch(`http://localhost:8000/interviews?user_id=${uid}`);
       if (res.ok) {

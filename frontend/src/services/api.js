@@ -15,7 +15,7 @@ const apiRequest = async (endpoint, options = {}) => {
   };
 
   // Add auth token if available
-  const token = localStorage.getItem('careerlens_token');
+  const token = localStorage.getItem('careermentor_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

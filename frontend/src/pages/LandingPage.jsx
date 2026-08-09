@@ -22,7 +22,7 @@ const LandingPage = () => {
               fontWeight: 700,
             }}
           >
-            CareerLens AI
+            CareerMentor AI
           </p>
           <h1 className="hero__title animate-fade-in-up animate-delay-1" style={{ fontSize: '4rem', fontWeight: 'bold' }}>
             Turn Preparation Into<br />
@@ -30,7 +30,7 @@ const LandingPage = () => {
           </h1>
 
           <p className="hero__subtitle animate-fade-in-up animate-delay-2" style={{ maxWidth: '600px', margin: '0 auto 2rem' }}>
-            CareerLens AI transforms your resume into a personalized practice engine: role-specific interviews, deep question-wise evaluation, ATS insights, and a clear roadmap to get hired faster.
+          CareerMentor AI transforms your resume into a personalized practice engine: role-specific interviews, deep question-wise evaluation, ATS insights, and a clear roadmap to get hired faster.
           </p>
 
           <div className="hero__actions animate-fade-in-up animate-delay-3" style={{ justifyContent: 'center', marginBottom: '4rem' }}>

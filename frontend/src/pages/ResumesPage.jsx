@@ -11,7 +11,7 @@ const ResumesPage = () => {
 
   const loadResumes = async () => {
     try {
-      const storedUser = JSON.parse(localStorage.getItem('careerlens_user') || '{}');
+      const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
       const userId = storedUser.id || 'demo_user_123';
       const res = await fetch(`http://localhost:8000/resumes?user_id=${userId}`);
       if (res.ok) {
@@ -155,7 +155,7 @@ const ResumesPage = () => {
                     className="btn btn-secondary btn-sm" 
                     onClick={(e) => { 
                       e.stopPropagation(); 
-                      const storedUser = JSON.parse(localStorage.getItem('careerlens_user') || '{}');
+                      const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
                       navigate('/interviews', { state: { resumeId: resume._id, userId: storedUser.id || 'demo_user_123' }});
                     }}
                   >

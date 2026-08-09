@@ -10,7 +10,7 @@ const AtsAnalysisPage = () => {
   const loadResumes = async () => {
     setLoading(true);
     try {
-      const storedUser = JSON.parse(localStorage.getItem('careerlens_user') || '{}');
+      const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
       const userId = storedUser.id || 'demo_user_123';
       const res = await fetch(`http://localhost:8000/resumes?user_id=${userId}`);
       if (res.ok) {

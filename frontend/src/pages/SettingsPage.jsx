@@ -12,7 +12,7 @@ const SettingsPage = () => {
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
-  const [theme, setTheme] = useState(() => localStorage.getItem('careerlens_theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('careermentor_theme') || 'dark');
   const [openFaq, setOpenFaq] = useState(0);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -20,7 +20,7 @@ const SettingsPage = () => {
   const [deleteAcknowledge, setDeleteAcknowledge] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('careerlens_user');
+    const storedUser = localStorage.getItem('careermentor_user');
     if (storedUser) {
       try {
         const u = JSON.parse(storedUser);
@@ -34,7 +34,7 @@ const SettingsPage = () => {
   useEffect(() => {
     const t = theme === 'light' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('careerlens_theme', t);
+    localStorage.setItem('careermentor_theme', t);
   }, [theme]);
 
   const faqItems = useMemo(() => ([
@@ -83,9 +83,9 @@ const SettingsPage = () => {
       if (res.ok && data.success) {
         setMessageType('success');
         setMessage(data.message || "Profile updated successfully!");
-        const storedUser = JSON.parse(localStorage.getItem('careerlens_user') || '{}');
+        const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
         storedUser.name = profile.name;
-        localStorage.setItem('careerlens_user', JSON.stringify(storedUser));
+        localStorage.setItem('careermentor_user', JSON.stringify(storedUser));
         
         setPasswords({ old: '', new: '', confirm: '' });
       } else {
