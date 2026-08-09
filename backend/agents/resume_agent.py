@@ -81,6 +81,31 @@ Rules:
 """
 
 
+def _analyze_resume_text(resume_text: str) -> dict:
+    """Run LLM analysis on already-extracted resume text."""
+    print("[STEP 2] Building analysis prompt...")
+    prompt = RESUME_ANALYSIS_PROMPT.format(resume_text=resume_text)
+
+    print("[STEP 3] Sending prompt to LLM (this may take a moment)...")
+    raw_response = generate_text(prompt)
+    print(f"[INFO] Received {len(raw_response)} characters from LLM.")
+
+    print("[STEP 4] Parsing LLM response as JSON...")
+    analysis = _parse_json_response(raw_response)
+    print("[DONE] Resume analysis complete.\n")
+    return analysis
+
+
+def analyze_resume_with_text(file_path: str) -> tuple[dict, str]:
+    """
+    End-to-end resume analysis that also returns the raw extracted PDF text.
+    """
+    print(f"\n[STEP 1] Extracting text from: {file_path}")
+    resume_text = extract_text_from_pdf(file_path)
+    analysis = _analyze_resume_text(resume_text)
+    return analysis, resume_text
+
+
 def analyze_resume(file_path: str) -> dict:
     """
     End-to-end resume analysis:
@@ -90,24 +115,7 @@ def analyze_resume(file_path: str) -> dict:
       4. Parse the JSON response
       5. Return a structured dictionary
     """
-    # Step 1 — Extract text from the PDF
-    print(f"\n[STEP 1] Extracting text from: {file_path}")
-    resume_text = extract_text_from_pdf(file_path)
-
-    # Step 2 — Build the prompt
-    print("[STEP 2] Building analysis prompt...")
-    prompt = RESUME_ANALYSIS_PROMPT.format(resume_text=resume_text)
-
-    # Step 3 — Call the LLM
-    print("[STEP 3] Sending prompt to LLM (this may take a moment)...")
-    raw_response = generate_text(prompt)
-    print(f"[INFO] Received {len(raw_response)} characters from LLM.")
-
-    # Step 4 — Parse the JSON response
-    print("[STEP 4] Parsing LLM response as JSON...")
-    analysis = _parse_json_response(raw_response)
-
-    print("[DONE] Resume analysis complete.\n")
+    analysis, _ = analyze_resume_with_text(file_path)
     return analysis
 
 

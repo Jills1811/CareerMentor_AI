@@ -8,9 +8,9 @@ const resumeSchema = new mongoose.Schema(
       required: [true, 'User ID is required'],
       index: true,
     },
-    fileUrl: {
+    fileName: {
       type: String,
-      required: [true, 'File URL is required'],
+      required: [true, 'File name is required'],
       trim: true,
     },
     extractedText: {
