@@ -72,8 +72,12 @@ TEMP_DIR.mkdir(exist_ok=True)
 
 # Connect to MongoDB
 try:
-    mongo_client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
-    db = mongo_client["careerlens_ai"]
+    mongo_uri = os.getenv("MONGO_URI")
+    mongo_client = MongoClient(
+    mongo_uri,
+    serverSelectionTimeoutMS=5000
+    )
+    db = mongo_client["careermentor_ai"]
 except Exception as e:
     logger.error(f"MongoDB connection failed: {e}")
     db = None
