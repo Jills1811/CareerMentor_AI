@@ -6,8 +6,11 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-# Allow imports from the backend root
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+BACKEND_DIR = Path(__file__).resolve().parent
+ROOT_DIR = BACKEND_DIR.parent
+
+# Allow imports from the backend package (agents/, models/, etc.)
+sys.path.insert(0, str(BACKEND_DIR))
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,8 +32,7 @@ from agents.evaluator_agent import evaluator_agent
 from agents.feedback_agent import feedback_agent
 
 # Load envs in priority order so existing server/.env values can be reused.
-ROOT_DIR = Path(__file__).resolve().parents[2]
-for env_path in [ROOT_DIR / ".env", ROOT_DIR / "backend" / ".env", ROOT_DIR / "server" / ".env"]:
+for env_path in [ROOT_DIR / ".env", BACKEND_DIR / ".env", ROOT_DIR / "server" / ".env"]:
     if env_path.exists():
         load_dotenv(env_path, override=False)
 
@@ -54,7 +56,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,20 +69,31 @@ app.add_middleware(
 
 sessions: dict = {}
 
-TEMP_DIR = Path(__file__).resolve().parent.parent / "temp"
+TEMP_DIR = BACKEND_DIR / "temp"
 TEMP_DIR.mkdir(exist_ok=True)
 
-# Connect to MongoDB
-try:
-    mongo_uri = os.getenv("MONGO_URI")
-    mongo_client = MongoClient(
-    mongo_uri,
-    serverSelectionTimeoutMS=5000
-    )
-    db = mongo_client["careermentor_ai"]
-except Exception as e:
-    logger.error(f"MongoDB connection failed: {e}")
-    db = None
+
+def _get_mongo_uri() -> str:
+    uri = os.getenv("MONGO_URI") or os.getenv("MONGODB_URI")
+    if uri and uri.strip():
+        return uri.strip()
+    return "mongodb://localhost:27017/"
+
+
+def _connect_mongodb():
+    mongo_uri = _get_mongo_uri()
+    db_name = os.getenv("MONGO_DB_NAME", "careermentor_ai")
+    try:
+        client = MongoClient(mongo_uri, serverSelectionTimeoutMS=8000)
+        client.admin.command("ping")
+        logger.info(f"MongoDB connected (database: {db_name})")
+        return client, client[db_name]
+    except Exception as e:
+        logger.error(f"MongoDB connection failed: {e}")
+        return None, None
+
+
+mongo_client, db = _connect_mongodb()
 
 
 def _delete_temp_pdf(file_path: Path) -> None:
@@ -243,7 +256,7 @@ def send_welcome_email(to_email: str, user_name: str) -> tuple[bool, str]:
         return False, "Email not configured"
 
     subject = "Welcome to CareerLens AI! 🚀"
-    app_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    app_url = os.getenv("FRONTEND_URL")
     safe_name = user_name.replace("<", "").replace(">", "").strip() or "there"
     html_body = f"""
     <!doctype html>

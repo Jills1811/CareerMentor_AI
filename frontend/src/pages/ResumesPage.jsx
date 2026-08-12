@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ResumesPage.css';
+import { API_BASE_URL } from "../services/api";
 
 const ResumesPage = () => {
   const navigate = useNavigate();
@@ -12,8 +13,10 @@ const ResumesPage = () => {
   const loadResumes = async () => {
     try {
       const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
-      const userId = storedUser.id || 'demo_user_123';
-      const res = await fetch(`http://localhost:8000/resumes?user_id=${userId}`);
+      const userId = storedUser.id?._id || storedUser?.id;
+      const res = await fetch(
+        `${API_BASE_URL}/resumes?user_id=${userId}`
+      );
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -40,16 +43,19 @@ const ResumesPage = () => {
     if (!file) return;
 
     setUploading(true);
-    const storedUser = JSON.parse(localStorage.getItem('careerlens_user') || '{}');
+    const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('user_id', storedUser.id || 'demo_user_123');
+    formData.append('user_id', storedUser.id);
 
     try {
-      const response = await fetch('http://localhost:8000/upload-resume', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/upload-resume`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
       await response.json();
       // Reload the list — the new one will appear at top
       loadResumes();
@@ -156,7 +162,7 @@ const ResumesPage = () => {
                     onClick={(e) => { 
                       e.stopPropagation(); 
                       const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
-                      navigate('/interviews', { state: { resumeId: resume._id, userId: storedUser.id || 'demo_user_123' }});
+                      navigate('/interviews', { state: { resumeId: resume._id, userId: storedUser.id}});
                     }}
                   >
                     Interview

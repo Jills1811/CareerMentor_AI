@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './InterviewsPage.css';
 import { speakText, cancelSpeech } from '../utils/speech';
+import { API_BASE_URL } from "../services/api";
 
 const InterviewsPage = () => {
   const location = useLocation();
@@ -40,8 +41,8 @@ const InterviewsPage = () => {
     setListLoading(true);
     try {
       const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
-      const uid = storedUser.id || 'demo_user_123';
-      const res = await fetch(`http://localhost:8000/interviews?user_id=${uid}`);
+      const uid = storedUser.id?._id || storedUser?.id;
+      const res = await fetch(`${API_BASE_URL}/interviews?user_id=${uid}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
@@ -143,7 +144,7 @@ const InterviewsPage = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/start-interview', {
+      const res = await fetch(`${API_BASE_URL}/start-interview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,7 +185,7 @@ const InterviewsPage = () => {
       // ignore
     }
     try {
-      const res = await fetch('http://localhost:8000/previous-question', {
+      const res = await fetch(`${API_BASE_URL}/previous-question`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
@@ -206,7 +207,7 @@ const InterviewsPage = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/answer-question', {
+      const res = await fetch(`${API_BASE_URL}/answer-question`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, answer: skip ? '' : answer })
@@ -232,7 +233,7 @@ const InterviewsPage = () => {
   const fetchFeedback = async () => {
     setInterviewState('feedback');
     try {
-       const res = await fetch(`http://localhost:8000/get-feedback?session_id=${sessionId}`);
+       const res = await fetch(`${API_BASE_URL}/get-feedback?session_id=${sessionId}`);
        const data = await res.json();
        if (!res.ok) throw new Error(data.detail || "Failed to get feedback");
        setFeedbackData(data);

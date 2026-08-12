@@ -1,11 +1,38 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+function parseApiError(data, response) {
+  if (data?.message) {
+    return data.message;
+  }
+
+  if (typeof data?.detail === 'string') {
+    return data.detail;
+  }
+
+  if (Array.isArray(data?.detail)) {
+    return data.detail
+      .map((item) => item?.msg || item?.message || String(item))
+      .join(', ');
+  }
+
+  if (response.status === 401) {
+    return 'Invalid email or password';
+  }
+
+  if (response.status >= 500) {
+    return 'Server error. Please try again in a moment.';
+  }
+
+  return 'Something went wrong';
+}
 
 /**
  * Core API request handler
  */
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -14,19 +41,32 @@ const apiRequest = async (endpoint, options = {}) => {
     ...options,
   };
 
-  // Add auth token if available
   const token = localStorage.getItem('careermentor_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, config);
-  const data = await response.json();
+  let response;
+  try {
+    response = await fetch(url, config);
+  } catch {
+    throw {
+      status: 0,
+      message: `Cannot reach the server at ${API_BASE_URL}. Make sure the backend is running.`,
+    };
+  }
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
     throw {
       status: response.status,
-      message: data.message || 'Something went wrong',
+      message: parseApiError(data, response),
       errors: data.errors || [],
     };
   }

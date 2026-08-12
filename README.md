@@ -275,7 +275,7 @@ HUGGINGFACEHUB_API_TOKEN=hf_your_api_token_here
 **Start the FastAPI server:**
 
 ```bash
-uvicorn backend.api.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:

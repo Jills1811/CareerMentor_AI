@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './FeedbackPage.css';
+import { API_BASE_URL } from "../services/api";
 
 const FeedbackPage = () => {
   const [loading, setLoading] = useState(true);
@@ -9,8 +10,8 @@ const FeedbackPage = () => {
     setLoading(true);
     try {
       const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
-      const userId = storedUser.id || 'demo_user_123';
-      const res = await fetch(`http://localhost:8000/resumes?user_id=${userId}`);
+      const userId = storedUser.id?._id || storedUser?.id;
+      const res = await fetch(`${API_BASE_URL}/resumes?user_id=${userId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) setResumes(data.resumes || []);

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import './SettingsPage.css';
+import { API_BASE_URL } from "../services/api";
 
 const SettingsPage = () => {
   const [profile, setProfile] = useState({ id: '', name: '', email: '' });
@@ -68,7 +69,7 @@ const SettingsPage = () => {
     setMessageType('success');
 
     try {
-      const res = await fetch('http://localhost:8000/update-profile', {
+      const res = await fetch(`${API_BASE_URL}/update-profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

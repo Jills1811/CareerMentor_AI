@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './DashboardPage.css';
+import { API_BASE_URL } from "../services/api";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -20,11 +21,11 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchDashboard = async () => {
       const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
-      const userId = storedUser.id || 'demo_user_123';
+      const userId = storedUser.id?._id || storedUser?.id;
       setUserName(storedUser.name || 'User');
       
       try {
-        const res = await fetch(`http://localhost:8000/dashboard-data?user_id=${userId}`);
+        const res = await fetch(`${API_BASE_URL}/dashboard-data?user_id=${userId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -45,7 +46,7 @@ const DashboardPage = () => {
     setDetailLoading(true);
     setInterviewDetail(null);
     try {
-      const res = await fetch(`http://localhost:8000/interview/${id}`);
+      const res = await fetch(`${API_BASE_URL}/interview/${id}`);
       if (res.ok) {
         const data = await res.json();
         setInterviewDetail(data);

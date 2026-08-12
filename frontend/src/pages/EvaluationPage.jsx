@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './EvaluationPage.css';
-
+import { API_BASE_URL } from "../services/api";
 const EvaluationPage = () => {
   const [loading, setLoading] = useState(true);
   const [interviews, setInterviews] = useState([]);
@@ -11,8 +11,8 @@ const EvaluationPage = () => {
     setLoading(true);
     try {
       const storedUser = JSON.parse(localStorage.getItem('careermentor_user') || '{}');
-      const uid = storedUser.id || 'demo_user_123';
-      const res = await fetch(`http://localhost:8000/interviews?user_id=${uid}`);
+      const uid = storedUser.id?._id || storedUser?.id;
+      const res = await fetch(`${API_BASE_URL}/interviews?user_id=${uid}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) setInterviews(data.interviews || []);
