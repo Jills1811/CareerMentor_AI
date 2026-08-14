@@ -9,3 +9,5 @@ python-multipart
 PyPDF2
 requests
 langgraph
+google-auth
+python-jose

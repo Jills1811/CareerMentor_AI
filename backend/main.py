@@ -5,6 +5,10 @@ import shutil
 import logging
 from pathlib import Path
 from datetime import datetime
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from jose import jwt
+from datetime import datetime, timedelta, timezone
 
 BACKEND_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BACKEND_DIR.parent
@@ -200,6 +204,8 @@ class AnswerRequest(BaseModel):
 class PreviousQuestionRequest(BaseModel):
     session_id: str
 
+class GoogleLoginRequest(BaseModel):
+    credential: str
 
 class LoginRequest(BaseModel):
     email: str
@@ -351,7 +357,7 @@ def send_welcome_email(to_email: str, user_name: str) -> tuple[bool, str]:
                 <tr>
                   <td style="padding:16px 22px;border-top:1px solid rgba(255,255,255,0.08);text-align:center;background:#0d1020;">
                     <div style="font-size:15px;color:#8d93b6;">
-                      © 2026 CareerLens AI. Built with ❤️ for your career growth.
+                      © 2026 CareerMentor AI. Built with ❤️ for your career growth.
                     </div>
                   </td>
                 </tr>
@@ -382,38 +388,154 @@ def send_welcome_email(to_email: str, user_name: str) -> tuple[bool, str]:
 
 
 # ──────────────────────────────────────────────
+# ENDPOINT: Google Auth
+# ──────────────────────────────────────────────
+
+@app.post("/auth/google")
+async def google_login(req: GoogleLoginRequest):
+    if not req.credential:
+        raise HTTPException(status_code=400, detail="Google credential is required")
+
+    if db is None:
+        raise HTTPException(status_code=500, detail="MongoDB not connected")
+
+    client_id = os.getenv("GOOGLE_CLIENT_ID") or os.getenv("VITE_GOOGLE_CLIENT_ID")
+
+    try:
+        google_user = id_token.verify_oauth2_token(
+            req.credential,
+            google_requests.Request(),
+            client_id
+        )
+
+        google_id = google_user.get("sub")
+        email = google_user.get("email")
+        name = google_user.get("name", "User")
+        email_verified = google_user.get("email_verified", False)
+
+        if not google_id or not email:
+            raise HTTPException(status_code=401, detail="Invalid Google account information")
+
+        if not email_verified:
+            raise HTTPException(status_code=401, detail="Google email is not verified")
+
+        email = email.strip().lower()
+        user = db.users.find_one({"email": email})
+
+        now = datetime.now(timezone.utc)
+        if not user:
+            result = db.users.insert_one({
+                "name": name.strip(),
+                "email": email,
+                "googleId": google_id,
+                "authProvider": "google",
+                "createdAt": now,
+                "updatedAt": now
+            })
+            user_id = str(result.inserted_id)
+            send_welcome_email(email, name)
+        else:
+            user_id = str(user["_id"])
+            db.users.update_one(
+                {"_id": user["_id"]},
+                {"$set": {"googleId": google_id, "authProvider": "google", "updatedAt": now}}
+            )
+
+        token = generate_token(user_id)
+
+        return {
+            "success": True,
+            "data": {
+                "user": {"id": user_id, "name": name, "email": email, "authProvider": "google"},
+                "token": token
+            },
+            "message": "Google login successful"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google authentication error: {e}")
+        raise HTTPException(status_code=401, detail=f"Google authentication failed: {str(e)}")
+
+# ──────────────────────────────────────────────
+# JWT TOKEN GENERATION
+# ──────────────────────────────────────────────
+
+def generate_token(user_id: str):
+    payload = {
+        "id": user_id,
+        "exp": datetime.utcnow().timestamp() + (7 * 24 * 60 * 60)
+    }
+
+    return jwt.encode(
+        payload,
+        os.getenv("JWT_SECRET"),
+        algorithm="HS256"
+    )
+
+# ──────────────────────────────────────────────
 # ENDPOINT 1: User Login
 # ──────────────────────────────────────────────
 
 @app.post("/auth/login")
 async def login(req: LoginRequest):
     """
-    Authenticate user against MongoDB users collection.
+    Authenticate user using email and password.
     """
+
     if not req.email or not req.password:
-        raise HTTPException(status_code=400, detail="Email and password are required")
-    
+        raise HTTPException(
+            status_code=400,
+            detail="Email and password are required"
+        )
+
     if db is None:
-        raise HTTPException(status_code=500, detail="MongoDB not connected")
-    
-    # Find user by email
-    user = db.users.find_one({"email": req.email.strip().lower()})
+        raise HTTPException(
+            status_code=500,
+            detail="MongoDB not connected"
+        )
+
+    # Find user
+    user = db.users.find_one({
+        "email": req.email.strip().lower()
+    })
+
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    # Google-only account cannot use password login
+    if not user.get("password"):
+        raise HTTPException(
+            status_code=401,
+            detail="This account uses Google login. Please continue with Google."
+        )
+
     # Verify password
-    if not verify_password(req.password, user.get("password", "")):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
+    if not verify_password(
+        req.password,
+        user.get("password", "")
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
     user_id = str(user["_id"])
+
     user_data = {
         "id": user_id,
         "name": user.get("name", "User"),
-        "email": user.get("email")
+        "email": user.get("email"),
+        "authProvider": user.get("authProvider", "local")
     }
-    
-    token = f"token_{user_id}"
-    
+
+    # Generate real JWT
+    token = generate_token(user_id)
+
     return {
         "success": True,
         "data": {
@@ -431,57 +553,90 @@ async def login(req: LoginRequest):
 @app.post("/auth/signup")
 async def signup(req: SignupRequest):
     """
-    Create a new user in MongoDB users collection.
+    Create a new user using email and password.
     """
+
     if not req.email or not req.name or not req.password:
-        raise HTTPException(status_code=400, detail="All fields are required")
-    
+        raise HTTPException(
+            status_code=400,
+            detail="All fields are required"
+        )
+
     if req.password != req.confirmPassword:
-        raise HTTPException(status_code=400, detail="Passwords do not match")
-    
+        raise HTTPException(
+            status_code=400,
+            detail="Passwords do not match"
+        )
+
     if len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-    
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 6 characters"
+        )
+
     if db is None:
-        raise HTTPException(status_code=500, detail="MongoDB not connected")
-    
-    # Check for duplicate email
-    existing = db.users.find_one({"email": req.email.strip().lower()})
-    if existing:
-        raise HTTPException(status_code=409, detail="An account with this email already exists")
-    
-    # Insert new user
-    hashed = hash_password(req.password)
-    result = db.users.insert_one({
-        "name": req.name.strip(),
-        "email": req.email.strip().lower(),
-        "password": hashed,
-        "createdAt": datetime.now(),
-        "updatedAt": datetime.now()
+        raise HTTPException(
+            status_code=500,
+            detail="MongoDB not connected"
+        )
+
+    email = req.email.strip().lower()
+    name = req.name.strip()
+
+    # Check duplicate email
+    existing = db.users.find_one({
+        "email": email
     })
-    
+
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="An account with this email already exists"
+        )
+
+    # Hash password
+    hashed = hash_password(req.password)
+
+    # Create user
+    result = db.users.insert_one({
+        "name": name,
+        "email": email,
+        "password": hashed,
+        "authProvider": "local",
+        "createdAt": datetime.utcnow(),
+        "updatedAt": datetime.utcnow()
+    })
+
     user_id = str(result.inserted_id)
+
     user_data = {
         "id": user_id,
-        "name": req.name.strip(),
-        "email": req.email.strip().lower()
+        "name": name,
+        "email": email,
+        "authProvider": "local"
     }
-    
+
+    # Send welcome email
     email_sent, email_status = send_welcome_email(
-        to_email=req.email.strip().lower(),
-        user_name=req.name.strip(),
+        to_email=email,
+        user_name=name,
     )
 
-    token = f"token_{user_id}"
-    
+    # Generate real JWT
+    token = generate_token(user_id)
+
     return {
         "success": True,
         "data": {
             "user": user_data,
             "token": token,
-            "welcomeEmailSent": email_sent,
+            "welcomeEmailSent": email_sent
         },
-        "message": "Signup successful" if email_sent else f"Signup successful (email status: {email_status})"
+        "message": (
+            "Signup successful"
+            if email_sent
+            else f"Signup successful (email status: {email_status})"
+        )
     }
 
 

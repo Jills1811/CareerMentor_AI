@@ -1,10 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
+const { OAuth2Client } = require('google-auth-library');
 const { User } = require('../models');
 const { sendWelcomeEmail } = require('../services/emailService');
 
 const router = express.Router();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /**
  * Generate JWT token
@@ -14,6 +16,86 @@ const generateToken = (userId) => {
     expiresIn: '1h',
   });
 };
+
+/**
+ * @route   POST /api/auth/google
+ * @desc    Authenticate/Register user via Google OAuth credential
+ * @access  Public
+ */
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential token is required.',
+      });
+    }
+
+    // 1. Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Google token payload.',
+      });
+    }
+
+    const { sub: googleId, email, name } = payload;
+
+    // 2. Find or create user
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Link Google ID if registered via local signup previously
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.authProvider = 'google';
+        await user.save();
+      }
+    } else {
+      user = new User({
+        name: name || email.split('@')[0],
+        email,
+        googleId,
+        authProvider: 'google',
+      });
+      await user.save();
+
+      // Send welcome email
+      sendWelcomeEmail(email, user.name);
+    }
+
+    // 3. Generate token & return response
+    const token = generateToken(user._id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Google authentication successful!',
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error('Google Auth Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Google authentication failed on server. Please try again.',
+    });
+  }
+});
 
 /**
  * @route   POST /api/auth/signup
@@ -46,7 +128,6 @@ router.post(
   ],
   async (req, res) => {
     try {
-      // Validation
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -57,7 +138,6 @@ router.post(
 
       const { name, email, password } = req.body;
 
-      // Check if user exists
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(409).json({
@@ -66,14 +146,10 @@ router.post(
         });
       }
 
-      // Create user
       const user = new User({ name, email, password });
       await user.save();
 
-      // Generate token
       const token = generateToken(user._id);
-
-      // Send welcome email (non-blocking)
       sendWelcomeEmail(email, name);
 
       res.status(201).json({
@@ -116,7 +192,6 @@ router.post(
   ],
   async (req, res) => {
     try {
-      // Validation
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -127,7 +202,6 @@ router.post(
 
       const { email, password } = req.body;
 
-      // Find user (include password for comparison)
       const user = await User.findOne({ email }).select('+password');
       if (!user) {
         return res.status(401).json({
@@ -136,7 +210,6 @@ router.post(
         });
       }
 
-      // Compare password
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         return res.status(401).json({
@@ -145,7 +218,6 @@ router.post(
         });
       }
 
-      // Generate token
       const token = generateToken(user._id);
 
       res.json({

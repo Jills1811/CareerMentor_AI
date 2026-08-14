@@ -92,6 +92,26 @@ export const loginUser = async (email, password) => {
 };
 
 /**
+ * Login/register user with Google
+ */
+export const googleLogin = async (credential) => {
+  const data = await apiRequest('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  });
+
+  if (data.data?.token) {
+    localStorage.setItem('careermentor_token', data.data.token);
+    localStorage.setItem(
+      'careermentor_user',
+      JSON.stringify(data.data.user)
+    );
+  }
+
+  return data;
+};
+
+/**
  * Signup user
  */
 export const signupUser = async (name, email, password, confirmPassword) => {

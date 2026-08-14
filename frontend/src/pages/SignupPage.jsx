@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signupUser } from '../services/api';
+import { GoogleLogin } from '@react-oauth/google';
+import { signupUser, googleLogin } from '../services/api';
 import './AuthPages.css';
 
 const SignupPage = () => {
@@ -16,6 +17,30 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setApiError('');
+
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error('Google authentication failed.');
+      }
+
+      await googleLogin(credentialResponse.credential);
+      navigate('/dashboard');
+    } catch (err) {
+      setApiError(
+        err.message || 'Google signup failed. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setApiError('Google signup failed. Please try again.');
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -27,16 +52,16 @@ const SignupPage = () => {
     const newErrors = {};
     if (!form.name.trim()) newErrors.name = 'Name is required';
     else if (form.name.trim().length < 2) newErrors.name = 'Name must be at least 2 characters';
-    
+
     if (!form.email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Invalid email format';
-    
+
     if (!form.password) newErrors.password = 'Password is required';
     else if (form.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    
+
     if (!form.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
     else if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    
+
     return newErrors;
   };
 
@@ -76,7 +101,7 @@ const SignupPage = () => {
         <div className="auth-card__header">
           <Link to="/" className="auth-card__logo">
             <span>🔍</span>
-            Career<span className="text-gradient">Lens</span> AI
+            Career<span className="text-gradient">Mentor</span> AI
           </Link>
           <h1 className="auth-card__title">Create Your Account</h1>
           <p className="auth-card__subtitle">
@@ -185,6 +210,18 @@ const SignupPage = () => {
               'Create Account'
             )}
           </button>
+
+          <div className="auth-divider">
+            <span>OR</span>
+          </div>
+
+          <div className="google-login">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap={false}
+            />
+          </div>
         </form>
 
         <p className="auth-card__footer">

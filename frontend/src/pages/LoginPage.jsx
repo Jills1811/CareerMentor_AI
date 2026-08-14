@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { loginUser } from '../services/api';
+import { GoogleLogin } from '@react-oauth/google';
+import { loginUser, googleLogin } from '../services/api';
 import './AuthPages.css';
 
 const LoginPage = () => {
@@ -9,6 +10,30 @@ const LoginPage = () => {
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setApiError('');
+
+    try {
+      if (!credentialResponse.credential) {
+        throw new Error('Google authentication failed.');
+      }
+
+      await googleLogin(credentialResponse.credential);
+      navigate('/dashboard');
+    } catch (err) {
+      setApiError(
+        err.message || 'Google login failed. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setApiError('Google login failed. Please try again.');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -122,6 +147,18 @@ const LoginPage = () => {
             )}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <div className="google-login">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            useOneTap={false}
+          />
+        </div>
 
         <p className="auth-card__footer">
           New to CareerMentor AI?{' '}
