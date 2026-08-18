@@ -33,7 +33,8 @@ def generate_text(prompt: str) -> str:
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 2048,
+        "max_tokens": 4096,
+        "temperature": 0.2,
     }
 
     # 4. Send request using requests library

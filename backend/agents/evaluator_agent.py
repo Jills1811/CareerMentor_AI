@@ -1,132 +1,80 @@
 import json
+import re
 import sys
+import logging
 from pathlib import Path
 
-# Allow imports from the backend root (parent of agents/)
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from models.llm import generate_text
 
-
-# ──────────────────────────────────────────────
-# Prompt Template
-# ──────────────────────────────────────────────
+logger = logging.getLogger("EvaluatorAgent")
 
 PROMPT_TEMPLATE = """
-You are a senior technical interviewer.
-
-Your task is to evaluate a candidate's interview answers.
-
-For each question:
-
-- Evaluate the answer
-- Give a score out of 10
-- Identify strengths
-- Identify mistakes
-- Suggest improvements
-
-Also:
-
-- Provide overall feedback across all answers
-- Calculate overall score (average of all individual scores)
+You are a senior technical interviewer. Evaluate each candidate answer individually and return strictly valid JSON.
 
 Interview Data:
 \"\"\"
 {data}
 \"\"\"
 
-Return strictly in JSON:
-
+Return strictly in this JSON format:
 {{
-  "overall_score": number,
+  "overall_score": 7.5,
   "question_wise_feedback": [
     {{
-      "question": "...",
-      "score": number,
-      "strengths": ["..."],
-      "mistakes": ["..."],
-      "improvements": ["..."]
+      "question": "Question text",
+      "score": 7.5,
+      "strengths": ["Specific point candidate got right"],
+      "mistakes": ["Specific technical concept missed or incorrect"],
+      "improvements": ["Specific improvement recommendation"],
+      "expected_answer": "Summary of ideal answer"
     }}
   ],
-  "overall_strengths": ["..."],
-  "overall_weaknesses": ["..."],
-  "final_suggestions": ["..."]
+  "overall_strengths": ["Key overall strength"],
+  "overall_weaknesses": ["Key overall gap"],
+  "final_suggestions": ["Actionable preparation step"]
 }}
 
 Rules:
-- No explanation outside JSON
-- Be strict but constructive
-- Score realistically
-- Ensure valid JSON format
+- Output ONLY valid JSON. No conversational intro/outro.
+- Give a realistic score (0 to 10) for each question based on technical accuracy, not answer length.
 """
 
-
-# ──────────────────────────────────────────────
-# JSON Parser
-# ──────────────────────────────────────────────
-
 def parse_json(response: str) -> dict:
-    """
-    Attempts to extract valid JSON from the LLM response.
-    Handles markdown code fences and partial JSON blocks.
-    """
+    if not response or not response.strip():
+        return {}
+
     text = response.strip()
 
-    # Strip markdown code fences (```json ... ``` or ``` ... ```)
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-
-    # Try parsing directly
+    # 1. Direct parse
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
 
-    # Fallback: find the first { … } block in the response
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1 and end > start:
+    # 2. Extract from markdown code fence
+    fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
+    if fence_match:
         try:
-            return json.loads(text[start : end + 1])
+            return json.loads(fence_match.group(1).strip())
         except json.JSONDecodeError:
             pass
 
-    # If all parsing fails, return the raw text wrapped in a dict
-    print("[EVALUATOR][WARNING] Could not parse LLM response as JSON. Returning raw text.")
-    return {"raw_response": response}
+    # 3. Extract outermost curly braces
+    brace_match = re.search(r"\{[\s\S]*\}", text)
+    if brace_match:
+        try:
+            return json.loads(brace_match.group(0).strip())
+        except json.JSONDecodeError:
+            pass
 
-
-# ──────────────────────────────────────────────
-# Evaluator Agent
-# ──────────────────────────────────────────────
+    print(f"[EVALUATOR][ERROR] Failed to parse JSON. Raw LLM response:\n{text[:500]}...")
+    return {}
 
 def evaluator_agent(input_data) -> dict:
-    """
-    Takes interview Q&A pairs from the Interviewer Agent,
-    evaluates each answer, assigns scores, and returns
-    structured evaluation feedback.
-    """
     print("[EVALUATOR] Evaluating interview answers...")
-
-    # Step 1: Build prompt
-    prompt = PROMPT_TEMPLATE.format(
-        data=json.dumps(input_data, indent=2)
-    )
-
-    print("[EVALUATOR] Sending request to LLM...")
-
-    # Step 2: Call LLM
+    prompt = PROMPT_TEMPLATE.format(data=json.dumps(input_data, indent=2))
     response = generate_text(prompt)
-
     print(f"[EVALUATOR] Received response of length: {len(response)}")
-
-    print("[EVALUATOR] Parsing response...")
-
-    # Step 3: Parse JSON
     parsed = parse_json(response)
-
-    print("[EVALUATOR] Evaluation completed.")
-
     return parsed

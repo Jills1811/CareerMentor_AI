@@ -131,7 +131,7 @@ def _to_number(value, default=0.0):
 
 def _normalize_evaluation_result(evaluation_result: dict, attempted_pairs: list[dict]) -> dict:
     """
-    Normalize evaluator output so the frontend always gets usable score + question-wise data.
+    Normalizes evaluator output while preserving question-specific LLM feedback.
     """
     normalized = evaluation_result if isinstance(evaluation_result, dict) else {}
     qwf = normalized.get("question_wise_feedback")
@@ -140,43 +140,52 @@ def _normalize_evaluation_result(evaluation_result: dict, attempted_pairs: list[
     normalized_qwf = []
     for idx, pair in enumerate(attempted_pairs):
         incoming = qwf[idx] if idx < len(qwf) and isinstance(qwf[idx], dict) else {}
+        q_text = str(incoming.get("question") or pair.get("question", "")).strip()
         answer_text = str(pair.get("answer", "")).strip()
-        length_score = min(10, max(1, len(answer_text.split()) // 8 + 2))
-        score = _to_number(incoming.get("score", length_score), default=length_score)
-        score = max(0, min(10, score))
 
-        strengths = incoming.get("strengths")
-        strengths = strengths if isinstance(strengths, list) else []
-        mistakes = incoming.get("mistakes")
-        mistakes = mistakes if isinstance(mistakes, list) else []
-        improvements = incoming.get("improvements")
-        improvements = improvements if isinstance(improvements, list) else []
+        # Score determination: prioritize LLM score, fallback to dynamic length baseline
+        default_score = min(10.0, max(2.0, len(answer_text.split()) / 8.0 + 3.0))
+        score = _to_number(incoming.get("score", default_score), default=default_score)
+        score = max(0.0, min(10.0, score))
 
-        if not improvements:
-            improvements = ["Add a clearer structure: concept, approach, and one practical example."]
+        # Dynamic context-aware feedback (preserves LLM lists, avoids static strings)
+        strengths = [str(s).strip() for s in incoming.get("strengths", []) if str(s).strip()] if isinstance(incoming.get("strengths"), list) else []
+        if not strengths:
+            strengths = ["Directly addressed the prompt."]
+
+        mistakes = [str(m).strip() for m in incoming.get("mistakes", []) if str(m).strip()] if isinstance(incoming.get("mistakes"), list) else []
         if not mistakes:
-            mistakes = ["Could be more specific and technically detailed."]
+            mistakes = [f"Could include specific implementation details and design trade-offs for '{q_text[:35]}...'."]
+
+        improvements = [str(imp).strip() for imp in incoming.get("improvements", []) if str(imp).strip()] if isinstance(incoming.get("improvements"), list) else []
+        if not improvements:
+            improvements = [f"Explain the core mechanisms, potential bottlenecks, and production considerations for '{q_text[:35]}...'."]
+
+        expected = str(incoming.get("expected_answer") or "").strip()
+        if not expected:
+            expected = f"A structured explanation covering core mechanisms and production trade-offs for {q_text[:40]}."
 
         normalized_qwf.append({
-            "question": incoming.get("question") or pair.get("question", ""),
+            "question": q_text,
             "score": round(score, 1),
             "strengths": strengths,
             "mistakes": mistakes,
             "improvements": improvements,
-            "expected_answer": incoming.get("expected_answer", ""),
+            "expected_answer": expected,
         })
 
     if normalized_qwf:
         avg_10 = sum(item["score"] for item in normalized_qwf) / len(normalized_qwf)
         overall_100 = round(avg_10 * 10, 1)
     else:
-        overall_100 = 0
+        overall_100 = 0.0
 
     normalized["question_wise_feedback"] = normalized_qwf
     normalized["overall_score"] = round(_to_number(normalized.get("overall_score", overall_100), default=overall_100), 1)
-    if normalized["overall_score"] <= 10:
-        normalized["overall_score"] = round(normalized["overall_score"] * 10, 1)
-    normalized["overall_score"] = max(0, min(100, normalized["overall_score"]))
+    if normalized["overall_score"] <= 10.0:
+        normalized["overall_score"] = round(normalized["overall_score"] * 10.0, 1)
+    normalized["overall_score"] = max(0.0, min(100.0, normalized["overall_score"]))
+    
     normalized["overall_strengths"] = normalized.get("overall_strengths") if isinstance(normalized.get("overall_strengths"), list) else []
     normalized["overall_weaknesses"] = normalized.get("overall_weaknesses") if isinstance(normalized.get("overall_weaknesses"), list) else []
     normalized["final_suggestions"] = normalized.get("final_suggestions") if isinstance(normalized.get("final_suggestions"), list) else []
